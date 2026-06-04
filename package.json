@@ -1,0 +1,12 @@
+{
+  "name": "desktop-permission-test-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:permission": "cucumber-js features/operator-role-permission.feature --import features/step_definitions/**/*.js --format progress --format json:reports/cucumber-report.json"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "*"
+  }
+}
