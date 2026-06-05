@@ -9,26 +9,10 @@ export const permissionPages = {
     adminNodeName: '客户基础资料设置',
 
     permissions: {
-      查询: {
-        actualKey: '查询按钮',
-        checkedState: 'enabled',
-        uncheckedState: 'disabledOrHidden',
-      },
-      修改: {
-        actualKey: '修改按钮',
-        checkedState: 'enabled',
-        uncheckedState: 'disabledOrHidden',
-      },
-      导出: {
-        actualKey: '导出按钮',
-        checkedState: 'enabled',
-        uncheckedState: 'disabledOrHidden',
-      },
-      免查询导出: {
-        actualKey: '免查询导出按钮',
-        checkedState: 'enabled',
-        uncheckedState: 'disabledOrHidden',
-      },
+      查询: '查询按钮',
+      修改: '修改按钮',
+      导出: '导出按钮',
+      免查询导出: '免查询导出按钮',
     },
   },
 
@@ -42,21 +26,9 @@ export const permissionPages = {
     adminNodeName: '资金账户设置',
 
     permissions: {
-      查询: {
-        actualKey: '查询按钮',
-        checkedState: 'enabled',
-        uncheckedState: 'disabledOrHidden',
-      },
-      修改: {
-        actualKey: '修改按钮',
-        checkedState: 'enabled',
-        uncheckedState: 'disabledOrHidden',
-      },
-      删除: {
-        actualKey: '删除按钮',
-        checkedState: 'enabled',
-        uncheckedState: 'disabledOrHidden',
-      },
+      查询: '查询按钮',
+      修改: '修改按钮',
+      删除: '删除按钮',
     },
   },
 };

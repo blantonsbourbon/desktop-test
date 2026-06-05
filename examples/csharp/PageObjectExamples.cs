@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using FlaUI.Core.AutomationElements;
 
 namespace AutomationEngine.Pages.Examples;
@@ -69,24 +70,23 @@ public sealed class CustomerBasicSettingPageExample : AppPage
 
     public object GetInfo()
     {
-        return new
+        return new List<Dictionary<string, object>>
         {
-            查询按钮 = ReadControlState("查询按钮"),
-            修改按钮 = ReadControlState("修改按钮"),
-            导出按钮 = ReadControlState("导出按钮"),
-            免查询导出按钮 = ReadControlState("免查询导出按钮"),
+            ReadControlState("查询按钮"),
+            ReadControlState("修改按钮"),
+            ReadControlState("导出按钮"),
+            ReadControlState("免查询导出按钮"),
         };
     }
 
-    private object ReadControlState(string name)
+    private Dictionary<string, object> ReadControlState(string name)
     {
         AutomationElement element = FindByName(name);
 
-        return new
+        return new Dictionary<string, object>
         {
-            exists = element != null,
-            visible = element != null && !element.Properties.IsOffscreen.Value,
-            enabled = element != null && element.Properties.IsEnabled.Value,
+            { "name", name },
+            { "enabled", element != null && element.Properties.IsEnabled.Value },
         };
     }
 }

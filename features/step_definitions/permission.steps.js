@@ -19,39 +19,38 @@ const attachJson = async (world, name, value) => {
   );
 };
 
-const isEnabled = control => {
-  if (!control) return false;
+const findControlInfo = ({ pageName, actualInfo, actualKey }) => {
+  assert.ok(
+    Array.isArray(actualInfo),
+    `页面 ${pageName} getInfo 需要返回 List<Dictionary>，例如 [{ name: '${actualKey}', enabled: true }]`
+  );
 
-  const visible = control.visible !== false && control.exists !== false;
-  const enabled = control.enabled === true;
+  const actualControl = actualInfo.find(control => control?.name === actualKey);
 
-  return visible && enabled;
+  assert.ok(
+    actualControl,
+    [
+      '未找到控件状态',
+      `页面: ${pageName}`,
+      `控件: ${actualKey}`,
+      `实际返回: ${JSON.stringify(actualInfo)}`,
+    ].join('\n')
+  );
+
+  return actualControl;
 };
 
-const isDisabledOrHidden = control => {
-  if (!control) return true;
-
-  const missing = control.exists === false;
-  const hidden = control.visible === false;
-  const disabled = control.enabled === false;
-
-  return missing || hidden || disabled;
-};
-
-const assertControlState = ({ pageName, permissionName, actualKey, actualControl, expectedChecked }) => {
-  const matched = expectedChecked
-    ? isEnabled(actualControl)
-    : isDisabledOrHidden(actualControl);
-
+const assertControlEnabled = ({ pageName, permissionName, actualKey, actualControl, expectedEnabled }) => {
   assert.equal(
-    matched,
-    true,
+    actualControl?.enabled,
+    expectedEnabled,
     [
       '权限不一致',
       `页面: ${pageName}`,
       `权限: ${permissionName}`,
       `控件: ${actualKey}`,
-      `管理员配置: ${expectedChecked ? '勾选' : '未勾选'}`,
+      `管理员配置: ${expectedEnabled ? '勾选' : '未勾选'}`,
+      `期望 enabled: ${expectedEnabled}`,
       `操作员实际: ${JSON.stringify(actualControl)}`,
     ].join('\n')
   );
@@ -125,16 +124,16 @@ Then('页面 {string} 的实际权限应与管理员配置一致', async functio
   const actualInfo = await req.getInfo(pageName);
   await attachJson(this, 'actualPageInfo', actualInfo);
 
-  for (const [permissionName, rule] of Object.entries(pageConfig.permissions)) {
-    const expectedChecked = expectedPermissions[permissionName] === true;
-    const actualControl = actualInfo?.[rule.actualKey];
+  for (const [permissionName, actualKey] of Object.entries(pageConfig.permissions)) {
+    const expectedEnabled = expectedPermissions[permissionName] === true;
+    const actualControl = findControlInfo({ pageName, actualInfo, actualKey });
 
-    assertControlState({
+    assertControlEnabled({
       pageName,
       permissionName,
-      actualKey: rule.actualKey,
+      actualKey,
       actualControl,
-      expectedChecked,
+      expectedEnabled,
     });
   }
 });
