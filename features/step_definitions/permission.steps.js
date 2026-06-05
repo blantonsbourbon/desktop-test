@@ -19,6 +19,31 @@ const attachJson = async (world, name, value) => {
   );
 };
 
+const normalizeOperationPermissions = operationPermissions => {
+  if (!Array.isArray(operationPermissions)) {
+    return operationPermissions;
+  }
+
+  return Object.fromEntries(
+    operationPermissions.map(permissionNode => {
+      const nodeName = permissionNode?.name ?? permissionNode?.nodeName;
+
+      assert.ok(
+        nodeName,
+        'operationPermissions 的 List<Dictionary> 每一项需要包含 name 字段'
+      );
+
+      const permissions = Object.fromEntries(
+        Object.entries(permissionNode).filter(
+          ([key]) => key !== 'name' && key !== 'nodeName'
+        )
+      );
+
+      return [nodeName, permissions];
+    })
+  );
+};
+
 const findControlInfo = ({ pageName, actualInfo, actualKey }) => {
   assert.ok(
     Array.isArray(actualInfo),
@@ -85,7 +110,7 @@ When('管理员读取当前角色的操作权限', async function () {
     '操作员设置页 getInfo 需要返回 operationPermissions'
   );
 
-  this.adminPermissionMatrix = info.operationPermissions;
+  this.adminPermissionMatrix = normalizeOperationPermissions(info.operationPermissions);
   await attachJson(this, 'adminPermissionMatrix', this.adminPermissionMatrix);
 });
 

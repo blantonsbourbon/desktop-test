@@ -3,6 +3,43 @@ using FlaUI.Core.AutomationElements;
 
 namespace AutomationEngine.Pages.Examples;
 
+public abstract class AppPage
+{
+    private readonly Dictionary<string, string> _xpaths = new Dictionary<string, string>();
+    private string _currentElement;
+
+    protected AutomationElement Root { get; set; }
+
+    public AppPage AddXpath(string key, string xpath)
+    {
+        _xpaths[key] = xpath;
+        _currentElement = key;
+        return this;
+    }
+
+    public AppPage AddXpath(string xpath)
+    {
+        _xpaths[_currentElement] = xpath;
+        return this;
+    }
+
+    protected Dictionary<string, object> ReadControlState(string key)
+    {
+        AutomationElement element = null;
+
+        if (Root != null && _xpaths.TryGetValue(key, out string xpath))
+        {
+            element = Root.FindFirstByXPath(xpath);
+        }
+
+        return new Dictionary<string, object>
+        {
+            { "name", key },
+            { "enabled", element != null && element.Properties.IsEnabled.Value },
+        };
+    }
+}
+
 public sealed class ClientPage : AppPage
 {
     public ClientPage()
@@ -38,20 +75,22 @@ public sealed class OperatorSettingPageExample : AppPage
     {
         return new
         {
-            operationPermissions = new
+            operationPermissions = new List<Dictionary<string, object>>
             {
-                客户基础资料设置 = new
+                new Dictionary<string, object>
                 {
-                    查询 = true,
-                    修改 = false,
-                    导出 = true,
-                    免查询导出 = true,
+                    { "name", "客户基础资料设置" },
+                    { "查询", true },
+                    { "修改", false },
+                    { "导出", true },
+                    { "免查询导出", true },
                 },
-                资金账户设置 = new
+                new Dictionary<string, object>
                 {
-                    查询 = true,
-                    修改 = false,
-                    删除 = false,
+                    { "name", "资金账户设置" },
+                    { "查询", true },
+                    { "修改", false },
+                    { "删除", false },
                 },
             },
         };
@@ -76,17 +115,6 @@ public sealed class CustomerBasicSettingPageExample : AppPage
             ReadControlState("修改按钮"),
             ReadControlState("导出按钮"),
             ReadControlState("免查询导出按钮"),
-        };
-    }
-
-    private Dictionary<string, object> ReadControlState(string name)
-    {
-        AutomationElement element = FindByName(name);
-
-        return new Dictionary<string, object>
-        {
-            { "name", name },
-            { "enabled", element != null && element.Properties.IsEnabled.Value },
         };
     }
 }
