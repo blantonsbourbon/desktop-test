@@ -19,31 +19,6 @@ const attachJson = async (world, name, value) => {
   );
 };
 
-const normalizeOperationPermissions = operationPermissions => {
-  if (!Array.isArray(operationPermissions)) {
-    return operationPermissions;
-  }
-
-  return Object.fromEntries(
-    operationPermissions.map(permissionNode => {
-      const nodeName = permissionNode?.name ?? permissionNode?.nodeName;
-
-      assert.ok(
-        nodeName,
-        'operationPermissions 的 List<Dictionary> 每一项需要包含 name 字段'
-      );
-
-      const permissions = Object.fromEntries(
-        Object.entries(permissionNode).filter(
-          ([key]) => key !== 'name' && key !== 'nodeName'
-        )
-      );
-
-      return [nodeName, permissions];
-    })
-  );
-};
-
 const findControlInfo = ({ pageName, actualInfo, actualKey }) => {
   assert.ok(
     Array.isArray(actualInfo),
@@ -74,7 +49,7 @@ const assertControlEnabled = ({ pageName, permissionName, actualKey, actualContr
       `页面: ${pageName}`,
       `权限: ${permissionName}`,
       `控件: ${actualKey}`,
-      `管理员配置: ${expectedEnabled ? '勾选' : '未勾选'}`,
+      `期望配置: ${expectedEnabled ? '勾选' : '未勾选'}`,
       `期望 enabled: ${expectedEnabled}`,
       `操作员实际: ${JSON.stringify(actualControl)}`,
     ].join('\n')
@@ -98,20 +73,8 @@ When('管理员选择操作员 {string} 和角色 {string}', async function (ope
 
   await req.click('菜单栏.操作员设置');
   await req.comboBoxSelect('操作员设置页.操作员代码', operator);
-  await req.checkboxSelect(`操作员设置页.${role}`);
+  await req.checkboxSelect(`操作员设置页.${role}-${role}`);
   await sleep(500);
-});
-
-When('管理员读取当前角色的操作权限', async function () {
-  const info = await req.getInfo('操作员设置页');
-
-  assert.ok(
-    info?.operationPermissions,
-    '操作员设置页 getInfo 需要返回 operationPermissions'
-  );
-
-  this.adminPermissionMatrix = normalizeOperationPermissions(info.operationPermissions);
-  await attachJson(this, 'adminPermissionMatrix', this.adminPermissionMatrix);
 });
 
 When('当前账号退出客户端', async function () {
@@ -136,17 +99,23 @@ When('打开业务页面 {string}', async function (pageName) {
   }
 });
 
-Then('页面 {string} 的实际权限应与管理员配置一致', async function (pageName) {
+Then('页面 {string} 的实际权限应与期望权限一致', async function (pageName) {
   const pageConfig = permissionPages[pageName];
   assert.ok(pageConfig, `未找到页面权限配置: ${pageName}`);
 
-  const expectedPermissions = this.adminPermissionMatrix?.[pageConfig.adminNodeName];
+  const expectedPermissions = pageConfig.expectedPermissionsByRole?.[this.role];
   assert.ok(
     expectedPermissions,
-    `管理员权限树中未找到节点: ${pageConfig.adminNodeName}`
+    [
+      '页面权限配置中未找到角色期望权限',
+      `页面: ${pageName}`,
+      `角色: ${this.role}`,
+      `权限节点: ${pageConfig.adminNodeName}`,
+    ].join('\n')
   );
 
   const actualInfo = await req.getInfo(pageName);
+  await attachJson(this, 'expectedPermissions', expectedPermissions);
   await attachJson(this, 'actualPageInfo', actualInfo);
 
   for (const [permissionName, actualKey] of Object.entries(pageConfig.permissions)) {

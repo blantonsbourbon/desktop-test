@@ -67,33 +67,8 @@ public sealed class OperatorSettingPageExample : AppPage
     {
         AddXpath("操作员代码", "/Pane/Window/Pane/ComboBox");
         AddXpath("操作权限", "/Pane/Window/Pane/Tab/TabItem[1]");
-        AddXpath("ASGDaily", "/Pane/Window/Pane/List/CheckBox[1]");
-        AddXpath("Trader", "/Pane/Window/Pane/List/CheckBox[2]");
-    }
-
-    public object GetInfo()
-    {
-        return new
-        {
-            operationPermissions = new List<Dictionary<string, object>>
-            {
-                new Dictionary<string, object>
-                {
-                    { "name", "客户基础资料设置" },
-                    { "查询", true },
-                    { "修改", false },
-                    { "导出", true },
-                    { "免查询导出", true },
-                },
-                new Dictionary<string, object>
-                {
-                    { "name", "资金账户设置" },
-                    { "查询", true },
-                    { "修改", false },
-                    { "删除", false },
-                },
-            },
-        };
+        AddXpath("ASGDaily-ASGDaily", "/Pane/Window/Pane/List/CheckBox[1]");
+        AddXpath("Trader-Trader", "/Pane/Window/Pane/List/CheckBox[2]");
     }
 }
 

@@ -5,8 +5,8 @@
 核心思路：
 
 - Cucumber feature 只描述通用业务流程。
-- JS 配置文件维护角色、页面、导航路径、权限点映射。
-- 后端 Page Object 继续维护 xpath，并通过 `getInfo` 返回状态数据。
+- JS 配置文件维护页面、导航路径、角色期望权限、权限点到控件的映射。
+- 后端 Page Object 继续维护 xpath，并通过业务页面的 `getInfo` 返回实际控件状态。
 - 前端 step definition 调用 `click`、`edit`、`getInfo`，并完成权限断言。
 
 页面别名统一使用 `客户端`。

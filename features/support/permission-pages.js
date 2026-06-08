@@ -8,6 +8,21 @@ export const permissionPages = {
 
     adminNodeName: '客户基础资料设置',
 
+    expectedPermissionsByRole: {
+      ASGDaily: {
+        查询: true,
+        修改: false,
+        导出: true,
+        免查询导出: true,
+      },
+      Trader: {
+        查询: true,
+        修改: false,
+        导出: true,
+        免查询导出: true,
+      },
+    },
+
     permissions: {
       查询: '查询按钮',
       修改: '修改按钮',
@@ -24,6 +39,14 @@ export const permissionPages = {
     ],
 
     adminNodeName: '资金账户设置',
+
+    expectedPermissionsByRole: {
+      ASGDaily: {
+        查询: true,
+        修改: false,
+        删除: false,
+      },
+    },
 
     permissions: {
       查询: '查询按钮',
