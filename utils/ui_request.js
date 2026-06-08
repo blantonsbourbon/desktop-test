@@ -28,7 +28,7 @@ export const checkboxSelect = async target => {
   return notConnected('checkboxSelect');
 };
 
-export const getInfo = async pageName => {
-  void pageName;
-  return notConnected('getInfo');
+export const elementExists = async target => {
+  void target;
+  return notConnected('elementExists');
 };

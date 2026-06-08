@@ -5,9 +5,6 @@ export const permissionPages = {
       '菜单栏.账户信息',
       '菜单栏.客户资料基础设置',
     ],
-
-    adminNodeName: '客户基础资料设置',
-
     expectedPermissionsByRole: {
       ASGDaily: {
         查询: true,
@@ -22,13 +19,6 @@ export const permissionPages = {
         免查询导出: true,
       },
     },
-
-    permissions: {
-      查询: '查询按钮',
-      修改: '修改按钮',
-      导出: '导出按钮',
-      免查询导出: '免查询导出按钮',
-    },
   },
 
   资金账户设置页: {
@@ -37,21 +27,12 @@ export const permissionPages = {
       '菜单栏.账户信息',
       '菜单栏.资金账户设置',
     ],
-
-    adminNodeName: '资金账户设置',
-
     expectedPermissionsByRole: {
       ASGDaily: {
         查询: true,
         修改: false,
         删除: false,
       },
-    },
-
-    permissions: {
-      查询: '查询按钮',
-      修改: '修改按钮',
-      删除: '删除按钮',
     },
   },
 };

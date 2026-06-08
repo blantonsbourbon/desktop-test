@@ -19,39 +19,16 @@ const attachJson = async (world, name, value) => {
   );
 };
 
-const findControlInfo = ({ pageName, actualInfo, actualKey }) => {
-  assert.ok(
-    Array.isArray(actualInfo),
-    `页面 ${pageName} getInfo 需要返回 List<Dictionary>，例如 [{ name: '${actualKey}', enabled: true }]`
-  );
-
-  const actualControl = actualInfo.find(control => control?.name === actualKey);
-
-  assert.ok(
-    actualControl,
-    [
-      '未找到控件状态',
-      `页面: ${pageName}`,
-      `控件: ${actualKey}`,
-      `实际返回: ${JSON.stringify(actualInfo)}`,
-    ].join('\n')
-  );
-
-  return actualControl;
-};
-
-const assertControlEnabled = ({ pageName, permissionName, actualKey, actualControl, expectedEnabled }) => {
+const assertElementExists = ({ pageName, permissionName, actualExists, expectedExists }) => {
   assert.equal(
-    actualControl?.enabled,
-    expectedEnabled,
+    actualExists,
+    expectedExists,
     [
       '权限不一致',
       `页面: ${pageName}`,
       `权限: ${permissionName}`,
-      `控件: ${actualKey}`,
-      `期望配置: ${expectedEnabled ? '勾选' : '未勾选'}`,
-      `期望 enabled: ${expectedEnabled}`,
-      `操作员实际: ${JSON.stringify(actualControl)}`,
+      `期望元素: ${expectedExists ? '存在' : '不存在'}`,
+      `实际元素: ${actualExists ? '存在' : '不存在'}`,
     ].join('\n')
   );
 };
@@ -110,24 +87,26 @@ Then('页面 {string} 的实际权限应与期望权限一致', async function (
       '页面权限配置中未找到角色期望权限',
       `页面: ${pageName}`,
       `角色: ${this.role}`,
-      `权限节点: ${pageConfig.adminNodeName}`,
     ].join('\n')
   );
 
-  const actualInfo = await req.getInfo(pageName);
   await attachJson(this, 'expectedPermissions', expectedPermissions);
-  await attachJson(this, 'actualPageInfo', actualInfo);
 
-  for (const [permissionName, actualKey] of Object.entries(pageConfig.permissions)) {
-    const expectedEnabled = expectedPermissions[permissionName] === true;
-    const actualControl = findControlInfo({ pageName, actualInfo, actualKey });
+  const actualPermissions = {};
 
-    assertControlEnabled({
+  for (const [permissionName, expectedExists] of Object.entries(expectedPermissions)) {
+    const actualExists = await req.elementExists(`${pageName}.${permissionName}`);
+    actualPermissions[permissionName] = actualExists;
+  }
+
+  await attachJson(this, 'actualPermissions', actualPermissions);
+
+  for (const [permissionName, expectedExists] of Object.entries(expectedPermissions)) {
+    assertElementExists({
       pageName,
       permissionName,
-      actualKey,
-      actualControl,
-      expectedEnabled,
+      actualExists: actualPermissions[permissionName],
+      expectedExists: expectedExists === true,
     });
   }
 });

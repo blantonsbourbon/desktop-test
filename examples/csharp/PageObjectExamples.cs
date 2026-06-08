@@ -23,20 +23,14 @@ public abstract class AppPage
         return this;
     }
 
-    protected Dictionary<string, object> ReadControlState(string key)
+    public bool ElementExists(string key)
     {
-        AutomationElement element = null;
-
-        if (Root != null && _xpaths.TryGetValue(key, out string xpath))
+        if (!_xpaths.TryGetValue(key, out string xpath))
         {
-            element = Root.FindFirstByXPath(xpath);
+            throw new KeyNotFoundException($"未找到控件 xpath 配置: {key}");
         }
 
-        return new Dictionary<string, object>
-        {
-            { "name", key },
-            { "enabled", element != null && element.Properties.IsEnabled.Value },
-        };
+        return Root != null && Root.FindFirstByXPath(xpath) != null;
     }
 }
 
@@ -76,20 +70,9 @@ public sealed class CustomerBasicSettingPageExample : AppPage
 {
     public CustomerBasicSettingPageExample()
     {
-        AddXpath("查询按钮", "/Pane/Window/Pane/Button[1]");
-        AddXpath("修改按钮", "/Pane/Window/Pane/Button[2]");
-        AddXpath("导出按钮", "/Pane/Window/Pane/Button[3]");
-        AddXpath("免查询导出按钮", "/Pane/Window/Pane/Button[4]");
-    }
-
-    public object GetInfo()
-    {
-        return new List<Dictionary<string, object>>
-        {
-            ReadControlState("查询按钮"),
-            ReadControlState("修改按钮"),
-            ReadControlState("导出按钮"),
-            ReadControlState("免查询导出按钮"),
-        };
+        AddXpath("查询", "/Pane/Window/Pane/Button[1]");
+        AddXpath("修改", "/Pane/Window/Pane/Button[2]");
+        AddXpath("导出", "/Pane/Window/Pane/Button[3]");
+        AddXpath("免查询导出", "/Pane/Window/Pane/Button[4]");
     }
 }
