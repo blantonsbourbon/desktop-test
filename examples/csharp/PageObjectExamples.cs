@@ -55,6 +55,117 @@ public sealed class PageRegistrationExample
     }
 }
 
+public sealed class ActionDtoExample
+{
+    public string AppName { get; set; }
+    public List<ActionItemDtoExample> Actions { get; set; } = new();
+}
+
+public sealed class ActionItemDtoExample
+{
+    public string Type { get; set; }
+    public string Target { get; set; }
+    public string Value { get; set; }
+    public List<Dictionary<string, string>> Data { get; set; }
+}
+
+public sealed class ResultDtoExample<T>
+{
+    public int Code { get; private set; }
+    public T Data { get; private set; }
+
+    public ResultDtoExample<T> SetCode(int code)
+    {
+        Code = code;
+        return this;
+    }
+
+    public ResultDtoExample<T> SetData(T data)
+    {
+        Data = data;
+        return this;
+    }
+}
+
+public interface IEntityExample
+{
+    void Launch();
+    void Show();
+    void Click(string target);
+    void CheckBoxSelect(string target, bool selected);
+    void Edit(string target, string value);
+    void ComboBoxSelect(string target, int index);
+    void ComboBoxEdit(string target, string value);
+    void ClickData(string target, List<Dictionary<string, string>> data);
+    bool CheckElementExists(string path);
+    List<Dictionary<string, string>> GetInfo(string target);
+}
+
+public sealed class EntityServiceExample
+{
+    public IEntityExample GetEntity(string appName)
+    {
+        throw new System.NotImplementedException();
+    }
+}
+
+public sealed class ActionControllerExample
+{
+    private readonly EntityServiceExample _entityService;
+
+    public ActionControllerExample(EntityServiceExample entityService)
+    {
+        _entityService = entityService;
+    }
+
+    public ResultDtoExample<List<Dictionary<string, string>>> DoActions(ActionDtoExample actionDto)
+    {
+        IEntityExample entity = _entityService.GetEntity(actionDto.AppName);
+        if (actionDto.Actions[0].Type != "Launch") entity.Show();
+
+        List<Dictionary<string, string>> data = new();
+
+        foreach (var action in actionDto.Actions)
+        {
+            if (action.Type == "Launch")
+                entity.Launch();
+            else if (action.Type == "Click")
+                entity.Click(action.Target);
+            else if (action.Type == "CheckBoxSelect")
+                entity.CheckBoxSelect(action.Target, bool.Parse(action.Value));
+            else if (action.Type == "Edit")
+                entity.Edit(action.Target, action.Value);
+            else if (action.Type == "ComboBoxSelect")
+                entity.ComboBoxSelect(action.Target, int.Parse(action.Value));
+            else if (action.Type == "ComboBoxEdit")
+                entity.ComboBoxEdit(action.Target, action.Value);
+            else if (action.Type == "ClickData")
+                entity.ClickData(action.Target, action.Data);
+            else if (action.Type == "ElementExists")
+            {
+                bool exists = entity.CheckElementExists(action.Target);
+
+                data.Add(new Dictionary<string, string>
+                {
+                    ["type"] = "ElementExists",
+                    ["target"] = action.Target,
+                    ["exists"] = exists ? "true" : "false",
+                });
+            }
+            else if (action.Type == "GetInfo")
+                data = entity.GetInfo(action.Target);
+        }
+
+        ResultDtoExample<List<Dictionary<string, string>>> resultDto = new();
+        if (data.Count > 0)
+        {
+            resultDto.SetData(data);
+        }
+
+        return resultDto.SetCode(200);
+    }
+}
+
 public sealed class OperatorSettingPageExample : AppPage
 {
     public OperatorSettingPageExample()
@@ -70,9 +181,9 @@ public sealed class CustomerBasicSettingPageExample : AppPage
 {
     public CustomerBasicSettingPageExample()
     {
-        AddXpath("查询", "/Pane/Window/Pane/Button[1]");
-        AddXpath("修改", "/Pane/Window/Pane/Button[2]");
-        AddXpath("导出", "/Pane/Window/Pane/Button[3]");
-        AddXpath("免查询导出", "/Pane/Window/Pane/Button[4]");
+        AddXpath("查询", "//Button[@Name='查询']");
+        AddXpath("修改", "//Button[@Name='修改']");
+        AddXpath("导出", "//Button[@Name='导出']");
+        AddXpath("免查询导出", "//Button[@Name='免查询导出']");
     }
 }
