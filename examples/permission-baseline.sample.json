@@ -1,0 +1,36 @@
+{
+  "source": "permission-db",
+  "schemaVersion": 1,
+  "navigationByPage": {
+    "客户资料基础设置页": [
+      "菜单栏.账户中心",
+      "菜单栏.账户信息",
+      "菜单栏.客户资料基础设置"
+    ],
+    "资金账户设置页": [
+      "菜单栏.账户中心",
+      "菜单栏.账户信息",
+      "菜单栏.资金账户设置"
+    ]
+  },
+  "permissions": [
+    {
+      "role": "ASGDaily",
+      "page": "客户资料基础设置页",
+      "permission": "查询",
+      "expectedExists": true
+    },
+    {
+      "role": "ASGDaily",
+      "page": "客户资料基础设置页",
+      "permission": "修改",
+      "expectedExists": false
+    },
+    {
+      "role": "Trader",
+      "page": "客户资料基础设置页",
+      "permission": "查询",
+      "expectedExists": true
+    }
+  ]
+}

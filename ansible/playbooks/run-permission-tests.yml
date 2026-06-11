@@ -1,0 +1,32 @@
+---
+- name: Run desktop permission tests
+  hosts: permission_test_runners
+  gather_facts: false
+
+  vars:
+    permission_test_environment:
+      UI_ACTION_ENDPOINT: "{{ ui_action_endpoint }}"
+      UI_APP_NAME: "{{ ui_app_name }}"
+      ADMIN_USER: "{{ admin_user }}"
+      ADMIN_PASSWORD: "{{ admin_password }}"
+    operator_credentials_environment: {}
+
+  tasks:
+    - name: Install Node dependencies
+      ansible.builtin.command:
+        cmd: npm install
+        chdir: "{{ permission_test_workspace }}"
+        creates: "{{ permission_test_workspace }}/node_modules/@cucumber/cucumber/package.json"
+      when: permission_test_install_dependencies | bool
+
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ permission_test_workspace }}/reports"
+        state: directory
+        mode: "0755"
+
+    - name: Run permission test suite
+      ansible.builtin.command:
+        cmd: "{{ permission_test_command }}"
+        chdir: "{{ permission_test_workspace }}"
+      environment: "{{ permission_test_environment | combine(operator_credentials_environment) }}"
