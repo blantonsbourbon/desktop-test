@@ -32,6 +32,8 @@ const parseElementExists = (result, target) => {
   );
 };
 
+const parseGetInfo = result => resultData(result) ?? [];
+
 class UIRequest {
   constructor(appName = resolveAppName()) {
     this.appName = appName;
@@ -75,6 +77,10 @@ class UIRequest {
     return this.addAction({ type: 'ElementExists', target });
   }
 
+  getInfo(target) {
+    return this.addAction({ type: 'GetInfo', target });
+  }
+
   async request() {
     const response = await fetch(actionEndpoint, {
       method: 'POST',
@@ -110,12 +116,18 @@ export const comboBoxSelect = async (target, value) => {
   await new UIRequest().comboBoxSelect(target, value).request();
 };
 
-export const checkboxSelect = async target => {
-  await new UIRequest().checkboxSelect(target).request();
+export const checkboxSelect = async (target, value = true) => {
+  await new UIRequest().checkboxSelect(target, value).request();
 };
 
 export const elementExists = async target => {
   const result = await new UIRequest().elementExists(target).request();
 
   return parseElementExists(result, target);
+};
+
+export const getInfo = async target => {
+  const result = await new UIRequest().getInfo(target).request();
+
+  return parseGetInfo(result);
 };

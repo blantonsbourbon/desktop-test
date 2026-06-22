@@ -6,13 +6,13 @@ export const permissionPages = {
       '菜单栏.客户资料基础设置',
     ],
     expectedPermissionsByRole: {
-      ASGDaily: {
+      RoleA: {
         查询: true,
         修改: false,
         导出: true,
         免查询导出: true,
       },
-      Trader: {
+      RoleB: {
         查询: true,
         修改: false,
         导出: true,
@@ -28,7 +28,7 @@ export const permissionPages = {
       '菜单栏.资金账户设置',
     ],
     expectedPermissionsByRole: {
-      ASGDaily: {
+      RoleA: {
         查询: true,
         修改: false,
         删除: false,

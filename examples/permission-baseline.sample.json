@@ -15,19 +15,19 @@
   },
   "permissions": [
     {
-      "role": "ASGDaily",
+      "role": "RoleA",
       "page": "客户资料基础设置页",
       "permission": "查询",
       "expectedExists": true
     },
     {
-      "role": "ASGDaily",
+      "role": "RoleA",
       "page": "客户资料基础设置页",
       "permission": "修改",
       "expectedExists": false
     },
     {
-      "role": "Trader",
+      "role": "RoleB",
       "page": "客户资料基础设置页",
       "permission": "查询",
       "expectedExists": true

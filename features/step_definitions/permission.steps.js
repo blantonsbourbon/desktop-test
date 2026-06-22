@@ -19,6 +19,116 @@ const attachJson = async (world, name, value) => {
   );
 };
 
+const operatorSettingPage = '操作员设置页';
+const knownOperatorRoles = [
+  ...new Set(
+    Object.values(permissionPages).flatMap(pageConfig =>
+      Object.keys(pageConfig.expectedPermissionsByRole ?? {})
+    )
+  ),
+];
+
+const operatorRoleCheckboxTarget = role =>
+  `${operatorSettingPage}.${role}-${role}`;
+
+const operatorRoleInfoTarget = role => `${operatorSettingPage}.${role}`;
+
+const asBoolean = value => {
+  if (value === true || value === 'true') return true;
+  if (value === false || value === 'false') return false;
+  return undefined;
+};
+
+const pickFirstInfoRow = info => (Array.isArray(info) ? info[0] : info) ?? {};
+
+const checkboxStateFromInfo = (info, role) => {
+  const row = pickFirstInfoRow(info);
+  const checked = asBoolean(
+    row.checked ?? row.Checked ?? row.isChecked ?? row.IsChecked
+  );
+  const enabled = asBoolean(
+    row.enabled ?? row.Enabled ?? row.isEnabled ?? row.IsEnabled
+  );
+
+  if (checked !== undefined) return { checked, enabled };
+
+  const toggleState = row.toggleState ?? row.ToggleState;
+  if (toggleState === 'On') return { checked: true, enabled };
+  if (toggleState === 'Off') return { checked: false, enabled };
+
+  const defaultAction =
+    row.defaultAction ??
+    row.DefaultAction ??
+    row[role] ??
+    row[`${role}-${role}`];
+
+  if (typeof defaultAction === 'string') {
+    const action = defaultAction.toLowerCase();
+
+    if (
+      action.includes('unchecked') ||
+      defaultAction.includes('未检查') ||
+      defaultAction.includes('未选中') ||
+      defaultAction.includes('未勾选')
+    ) {
+      return { checked: false, enabled };
+    }
+
+    if (
+      action.includes('checked') ||
+      defaultAction.includes('已检查') ||
+      defaultAction.includes('已选中') ||
+      defaultAction.includes('已勾选')
+    ) {
+      return { checked: true, enabled };
+    }
+
+    if (action.includes('uncheck') || defaultAction.includes('取消')) {
+      return { checked: true, enabled };
+    }
+
+    if (
+      action.includes('check') ||
+      defaultAction === '检查' ||
+      defaultAction.includes('选中') ||
+      defaultAction.includes('勾选')
+    ) {
+      return { checked: false, enabled };
+    }
+  }
+
+  throw new Error('GetInfo 没有返回可识别的 checkbox 状态');
+};
+
+const selectOnlyOperatorRole = async role => {
+  const roles = [...new Set([...knownOperatorRoles, role])];
+
+  for (const currentRole of roles) {
+    const info = await req.getInfo(operatorRoleInfoTarget(currentRole));
+    const state = checkboxStateFromInfo(info, currentRole);
+
+    if (state.enabled === false) {
+      throw new Error('角色 checkbox 不可操作');
+    }
+
+    if (currentRole !== role && state.checked) {
+      await req.checkboxSelect(operatorRoleCheckboxTarget(currentRole), false);
+      await sleep(200);
+    }
+  }
+
+  const targetInfo = await req.getInfo(operatorRoleInfoTarget(role));
+  const targetState = checkboxStateFromInfo(targetInfo, role);
+
+  if (targetState.enabled === false) {
+    throw new Error('角色 checkbox 不可操作');
+  }
+
+  if (!targetState.checked) {
+    await req.checkboxSelect(operatorRoleCheckboxTarget(role), true);
+  }
+};
+
 const assertElementExists = ({ pageName, permissionName, actualExists, expectedExists }) => {
   assert.equal(
     actualExists,
@@ -50,7 +160,7 @@ When('管理员选择操作员 {string} 和角色 {string}', async function (ope
 
   await req.click('菜单栏.操作员设置');
   await req.comboBoxSelect('操作员设置页.操作员代码', operator);
-  await req.checkboxSelect(`操作员设置页.${role}-${role}`);
+  await selectOnlyOperatorRole(role);
   await sleep(500);
 });
 

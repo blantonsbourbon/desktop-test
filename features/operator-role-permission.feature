@@ -12,6 +12,6 @@ Feature: 操作员角色权限一致性
 
     Examples:
       | operator | role     | page               |
-      | regTest  | ASGDaily | 客户资料基础设置页 |
-      | regTest  | ASGDaily | 资金账户设置页     |
-      | regTest  | Trader   | 客户资料基础设置页 |
+      | regTest  | RoleA    | 客户资料基础设置页 |
+      | regTest  | RoleA    | 资金账户设置页     |
+      | regTest  | RoleB    | 客户资料基础设置页 |

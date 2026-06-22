@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Definitions;
 
 namespace AutomationEngine.Pages.Examples;
 
@@ -27,10 +28,20 @@ public abstract class AppPage
     {
         if (!_xpaths.TryGetValue(key, out string xpath))
         {
-            throw new KeyNotFoundException($"未找到控件 xpath 配置: {key}");
+            throw new KeyNotFoundException("未找到控件 xpath 配置");
         }
 
         return Root != null && Root.FindFirstByXPath(xpath) != null;
+    }
+
+    protected AutomationElement FindByKey(string key)
+    {
+        if (!_xpaths.TryGetValue(key, out string xpath))
+        {
+            throw new KeyNotFoundException("未找到控件 xpath 配置");
+        }
+
+        return Root?.FindFirstByXPath(xpath);
     }
 }
 
@@ -172,8 +183,32 @@ public sealed class OperatorSettingPageExample : AppPage
     {
         AddXpath("操作员代码", "/Pane/Window/Pane/ComboBox");
         AddXpath("操作权限", "/Pane/Window/Pane/Tab/TabItem[1]");
-        AddXpath("ASGDaily-ASGDaily", "/Pane/Window/Pane/List/CheckBox[1]");
-        AddXpath("Trader-Trader", "/Pane/Window/Pane/List/CheckBox[2]");
+        AddXpath("RoleA-RoleA", "/Pane/Window/Pane/List/CheckBox[1]");
+        AddXpath("RoleB-RoleB", "/Pane/Window/Pane/List/CheckBox[2]");
+    }
+
+    public List<Dictionary<string, string>> GetInfo(string roleName)
+    {
+        string target = roleName.Contains("-") ? roleName : $"{roleName}-{roleName}";
+        AutomationElement item = FindByKey(target);
+
+        if (item == null)
+        {
+            throw new KeyNotFoundException("未找到角色 checkbox");
+        }
+
+        ToggleState toggleState = item.Patterns.Toggle.Pattern.ToggleState.Value;
+
+        return new List<Dictionary<string, string>>
+        {
+            new Dictionary<string, string>
+            {
+                ["type"] = "CheckBoxInfo",
+                ["checked"] = toggleState == ToggleState.On ? "true" : "false",
+                ["enabled"] = item.IsEnabled ? "true" : "false",
+                ["toggleState"] = toggleState.ToString(),
+            },
+        };
     }
 }
 
