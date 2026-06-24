@@ -33,99 +33,45 @@ const operatorRoleCheckboxTarget = role =>
 
 const operatorRoleInfoTarget = role => `${operatorSettingPage}.${role}`;
 
-const asBoolean = value => {
-  if (value === true || value === 'true') return true;
-  if (value === false || value === 'false') return false;
-  return undefined;
-};
-
 const pickFirstInfoRow = info => (Array.isArray(info) ? info[0] : info) ?? {};
+const infoKey = item => `${item}-${item}`;
 
-const checkboxStateFromInfo = (info, role) => {
-  const row = pickFirstInfoRow(info);
-  const checked = asBoolean(
-    row.checked ?? row.Checked ?? row.isChecked ?? row.IsChecked
-  );
-  const enabled = asBoolean(
-    row.enabled ?? row.Enabled ?? row.isEnabled ?? row.IsEnabled
-  );
+const stateTokens = value => {
+  if (typeof value !== 'string') return new Set();
 
-  if (checked !== undefined) return { checked, enabled };
-
-  const toggleState = row.toggleState ?? row.ToggleState;
-  if (toggleState === 'On') return { checked: true, enabled };
-  if (toggleState === 'Off') return { checked: false, enabled };
-
-  const defaultAction =
-    row.defaultAction ??
-    row.DefaultAction ??
-    row[role] ??
-    row[`${role}-${role}`];
-
-  if (typeof defaultAction === 'string') {
-    const action = defaultAction.toLowerCase();
-
-    if (
-      action.includes('unchecked') ||
-      defaultAction.includes('未检查') ||
-      defaultAction.includes('未选中') ||
-      defaultAction.includes('未勾选')
-    ) {
-      return { checked: false, enabled };
-    }
-
-    if (
-      action.includes('checked') ||
-      defaultAction.includes('已检查') ||
-      defaultAction.includes('已选中') ||
-      defaultAction.includes('已勾选')
-    ) {
-      return { checked: true, enabled };
-    }
-
-    if (action.includes('uncheck') || defaultAction.includes('取消')) {
-      return { checked: true, enabled };
-    }
-
-    if (
-      action.includes('check') ||
-      defaultAction === '检查' ||
-      defaultAction.includes('选中') ||
-      defaultAction.includes('勾选')
-    ) {
-      return { checked: false, enabled };
-    }
-  }
-
-  throw new Error('GetInfo 没有返回可识别的 checkbox 状态');
+  return new Set(value.split(',').map(item => item.trim().toLowerCase()));
 };
 
-const selectOnlyOperatorRole = async role => {
+const toBool = value => stateTokens(value).has('checked');
+
+const isFocused = value => stateTokens(value).has('focused');
+
+const checkboxValue = (row, item) =>
+  row[infoKey(item)] ?? row.state ?? row.State ?? row.value ?? row.Value;
+
+const clickRoleCheckbox = async (target, value) => {
+  await req.click(target);
+
+  if (!isFocused(value)) {
+    await sleep(100);
+    await req.click(target);
+  }
+};
+
+export const selectOnlyRole = async role => {
   const roles = [...new Set([...knownOperatorRoles, role])];
 
   for (const currentRole of roles) {
+    const target = operatorRoleCheckboxTarget(currentRole);
+    const shouldChecked = currentRole === role;
     const info = await req.getInfo(operatorRoleInfoTarget(currentRole));
-    const state = checkboxStateFromInfo(info, currentRole);
+    const value = checkboxValue(pickFirstInfoRow(info), currentRole);
+    const actualChecked = toBool(value);
 
-    if (state.enabled === false) {
-      throw new Error('角色 checkbox 不可操作');
-    }
-
-    if (currentRole !== role && state.checked) {
-      await req.checkboxSelect(operatorRoleCheckboxTarget(currentRole), false);
+    if (actualChecked !== shouldChecked) {
+      await clickRoleCheckbox(target, value);
       await sleep(200);
     }
-  }
-
-  const targetInfo = await req.getInfo(operatorRoleInfoTarget(role));
-  const targetState = checkboxStateFromInfo(targetInfo, role);
-
-  if (targetState.enabled === false) {
-    throw new Error('角色 checkbox 不可操作');
-  }
-
-  if (!targetState.checked) {
-    await req.checkboxSelect(operatorRoleCheckboxTarget(role), true);
   }
 };
 
@@ -160,7 +106,7 @@ When('管理员选择操作员 {string} 和角色 {string}', async function (ope
 
   await req.click('菜单栏.操作员设置');
   await req.comboBoxSelect('操作员设置页.操作员代码', operator);
-  await selectOnlyOperatorRole(role);
+  await selectOnlyRole(role);
   await sleep(500);
 });
 
