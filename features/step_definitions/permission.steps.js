@@ -89,6 +89,64 @@ const assertElementExists = ({ pageName, permissionName, actualExists, expectedE
   );
 };
 
+const pagesForRole = role =>
+  Object.entries(permissionPages)
+    .filter(([, pageConfig]) => pageConfig.expectedPermissionsByRole?.[role])
+    .map(([pageName]) => pageName);
+
+const openBusinessPage = async pageName => {
+  const pageConfig = permissionPages[pageName];
+  assert.ok(pageConfig, `未找到页面权限配置: ${pageName}`);
+
+  for (const target of pageConfig.navigate) {
+    await req.click(target);
+    await sleep(300);
+  }
+};
+
+const assertPagePermissions = async (world, pageName, role) => {
+  const pageConfig = permissionPages[pageName];
+  assert.ok(pageConfig, `未找到页面权限配置: ${pageName}`);
+
+  const expectedPermissions = pageConfig.expectedPermissionsByRole?.[role];
+  assert.ok(
+    expectedPermissions,
+    [
+      '页面权限配置中未找到角色期望权限',
+      `页面: ${pageName}`,
+      `角色: ${role}`,
+    ].join('\n')
+  );
+
+  await attachJson(world, `expectedPermissions:${pageName}`, {
+    pageName,
+    role,
+    permissions: expectedPermissions,
+  });
+
+  const actualPermissions = {};
+
+  for (const [permissionName] of Object.entries(expectedPermissions)) {
+    const actualExists = await req.elementExists(`${pageName}.${permissionName}`);
+    actualPermissions[permissionName] = actualExists;
+  }
+
+  await attachJson(world, `actualPermissions:${pageName}`, {
+    pageName,
+    role,
+    permissions: actualPermissions,
+  });
+
+  for (const [permissionName, expectedExists] of Object.entries(expectedPermissions)) {
+    assertElementExists({
+      pageName,
+      permissionName,
+      actualExists: actualPermissions[permissionName],
+      expectedExists: expectedExists === true,
+    });
+  }
+};
+
 Given('客户端已启动', async function () {
   await req.launch();
 });
@@ -123,46 +181,31 @@ When('操作员 {string} 登录客户端', async function (operator) {
 });
 
 When('打开业务页面 {string}', async function (pageName) {
-  const pageConfig = permissionPages[pageName];
-  assert.ok(pageConfig, `未找到页面权限配置: ${pageName}`);
-
-  for (const target of pageConfig.navigate) {
-    await req.click(target);
-    await sleep(300);
-  }
+  await openBusinessPage(pageName);
 });
 
 Then('页面 {string} 的实际权限应与期望权限一致', async function (pageName) {
-  const pageConfig = permissionPages[pageName];
-  assert.ok(pageConfig, `未找到页面权限配置: ${pageName}`);
+  await assertPagePermissions(this, pageName, this.role);
+});
 
-  const expectedPermissions = pageConfig.expectedPermissionsByRole?.[this.role];
+Then('当前角色在所有配置页面的实际权限应与期望权限一致', async function () {
+  const pageNames = pagesForRole(this.role);
   assert.ok(
-    expectedPermissions,
-    [
-      '页面权限配置中未找到角色期望权限',
-      `页面: ${pageName}`,
-      `角色: ${this.role}`,
-    ].join('\n')
+    pageNames.length > 0,
+    `未找到角色 ${this.role} 的页面权限配置`
   );
 
-  await attachJson(this, 'expectedPermissions', expectedPermissions);
+  await attachJson(this, 'plannedPages', {
+    role: this.role,
+    pages: pageNames,
+  });
 
-  const actualPermissions = {};
-
-  for (const [permissionName, expectedExists] of Object.entries(expectedPermissions)) {
-    const actualExists = await req.elementExists(`${pageName}.${permissionName}`);
-    actualPermissions[permissionName] = actualExists;
-  }
-
-  await attachJson(this, 'actualPermissions', actualPermissions);
-
-  for (const [permissionName, expectedExists] of Object.entries(expectedPermissions)) {
-    assertElementExists({
+  for (const pageName of pageNames) {
+    await attachJson(this, 'currentPage', {
+      role: this.role,
       pageName,
-      permissionName,
-      actualExists: actualPermissions[permissionName],
-      expectedExists: expectedExists === true,
     });
+    await openBusinessPage(pageName);
+    await assertPagePermissions(this, pageName, this.role);
   }
 });
