@@ -19,6 +19,24 @@ const attachJson = async (world, name, value) => {
   );
 };
 
+let allureModulePromise;
+
+const getAllure = async () => {
+  allureModulePromise ??= import('allure-js-commons').catch(() => null);
+
+  return allureModulePromise;
+};
+
+const reportStep = async (name, body) => {
+  const allure = await getAllure();
+
+  if (typeof allure?.step === 'function') {
+    return allure.step(name, body);
+  }
+
+  return body();
+};
+
 const operatorSettingPage = '操作员设置页';
 const knownOperatorRoles = [
   ...new Set(
@@ -260,7 +278,17 @@ When('打开业务页面 {string}', async function (pageName) {
 });
 
 Then('页面 {string} 的实际权限应与期望权限一致', async function (pageName) {
-  const comparison = await comparePagePermissions(this, pageName, this.role);
+  const comparison = await reportStep(`页面: ${pageName}`, async step => {
+    await step?.parameter?.('pageName', pageName);
+    const pageComparison = await comparePagePermissions(
+      this,
+      pageName,
+      this.role
+    );
+    await step?.displayName?.(`页面: ${pageName} - ${pageComparison.status}`);
+
+    return pageComparison;
+  });
 
   assertPermissionComparison(comparison);
 });
@@ -280,12 +308,24 @@ Then('当前角色在所有配置页面的实际权限应与期望权限一致',
   const pages = [];
 
   for (const pageName of pageNames) {
-    await attachJson(this, 'currentPage', {
-      role: this.role,
-      pageName,
-    });
-    await openBusinessPage(this, pageName);
-    pages.push(await comparePagePermissions(this, pageName, this.role));
+    pages.push(
+      await reportStep(`页面: ${pageName}`, async step => {
+        await step?.parameter?.('pageName', pageName);
+        await attachJson(this, 'currentPage', {
+          role: this.role,
+          pageName,
+        });
+        await openBusinessPage(this, pageName);
+        const comparison = await comparePagePermissions(
+          this,
+          pageName,
+          this.role
+        );
+        await step?.displayName?.(`页面: ${pageName} - ${comparison.status}`);
+
+        return comparison;
+      })
+    );
   }
 
   const summary = {
