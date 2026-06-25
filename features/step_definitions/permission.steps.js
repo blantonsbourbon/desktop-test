@@ -75,16 +75,48 @@ export const selectOnlyRole = async role => {
   }
 };
 
-const assertElementExists = ({ pageName, permissionName, actualExists, expectedExists }) => {
+const assertPermissionComparison = comparison => {
+  const mismatches = comparison.permissions.filter(item => !item.matched);
+
   assert.equal(
-    actualExists,
-    expectedExists,
+    mismatches.length,
+    0,
     [
       '权限不一致',
-      `页面: ${pageName}`,
-      `权限: ${permissionName}`,
-      `期望元素: ${expectedExists ? '存在' : '不存在'}`,
-      `实际元素: ${actualExists ? '存在' : '不存在'}`,
+      `页面: ${comparison.pageName}`,
+      `角色: ${comparison.role}`,
+      ...mismatches.map(
+        item =>
+          [
+            `权限: ${item.permissionName}`,
+            `期望元素: ${item.expectedExists ? '存在' : '不存在'}`,
+            `实际元素: ${item.actualExists ? '存在' : '不存在'}`,
+          ].join(', ')
+      ),
+    ].join('\n')
+  );
+};
+
+const assertPermissionSummary = summary => {
+  const mismatches = summary.pages.flatMap(page =>
+    page.mismatches.map(item => ({ ...item, pageName: page.pageName }))
+  );
+
+  assert.equal(
+    mismatches.length,
+    0,
+    [
+      '权限不一致',
+      `角色: ${summary.role}`,
+      ...mismatches.map(
+        item =>
+          [
+            `页面: ${item.pageName}`,
+            `权限: ${item.permissionName}`,
+            `期望元素: ${item.expectedExists ? '存在' : '不存在'}`,
+            `实际元素: ${item.actualExists ? '存在' : '不存在'}`,
+          ].join(', ')
+      ),
     ].join('\n')
   );
 };
@@ -128,7 +160,7 @@ const openBusinessPage = async (world, pageName) => {
   world.currentNavigatePath = [...navigate];
 };
 
-const assertPagePermissions = async (world, pageName, role) => {
+const comparePagePermissions = async (world, pageName, role) => {
   const pageConfig = permissionPages[pageName];
   assert.ok(pageConfig, `未找到页面权限配置: ${pageName}`);
 
@@ -161,14 +193,31 @@ const assertPagePermissions = async (world, pageName, role) => {
     permissions: actualPermissions,
   });
 
-  for (const [permissionName, expectedExists] of Object.entries(expectedPermissions)) {
-    assertElementExists({
-      pageName,
-      permissionName,
-      actualExists: actualPermissions[permissionName],
-      expectedExists: expectedExists === true,
-    });
-  }
+  const permissions = Object.entries(expectedPermissions).map(
+    ([permissionName, expectedExists]) => {
+      const normalizedExpectedExists = expectedExists === true;
+      const actualExists = actualPermissions[permissionName];
+
+      return {
+        permissionName,
+        expectedExists: normalizedExpectedExists,
+        actualExists,
+        matched: actualExists === normalizedExpectedExists,
+      };
+    }
+  );
+  const mismatches = permissions.filter(item => !item.matched);
+  const comparison = {
+    pageName,
+    role,
+    status: mismatches.length === 0 ? 'match' : 'unmatch',
+    permissions,
+    mismatches,
+  };
+
+  await attachJson(world, `permissionComparison:${pageName}`, comparison);
+
+  return comparison;
 };
 
 Given('客户端已启动', async function () {
@@ -211,7 +260,9 @@ When('打开业务页面 {string}', async function (pageName) {
 });
 
 Then('页面 {string} 的实际权限应与期望权限一致', async function (pageName) {
-  await assertPagePermissions(this, pageName, this.role);
+  const comparison = await comparePagePermissions(this, pageName, this.role);
+
+  assertPermissionComparison(comparison);
 });
 
 Then('当前角色在所有配置页面的实际权限应与期望权限一致', async function () {
@@ -226,12 +277,28 @@ Then('当前角色在所有配置页面的实际权限应与期望权限一致',
     pages: pageNames,
   });
 
+  const pages = [];
+
   for (const pageName of pageNames) {
     await attachJson(this, 'currentPage', {
       role: this.role,
       pageName,
     });
     await openBusinessPage(this, pageName);
-    await assertPagePermissions(this, pageName, this.role);
+    pages.push(await comparePagePermissions(this, pageName, this.role));
   }
+
+  const summary = {
+    role: this.role,
+    status: pages.every(page => page.status === 'match') ? 'match' : 'unmatch',
+    pages: pages.map(page => ({
+      pageName: page.pageName,
+      status: page.status,
+      mismatches: page.mismatches,
+    })),
+  };
+
+  await attachJson(this, 'permissionComparisonSummary', summary);
+
+  assertPermissionSummary(summary);
 });
