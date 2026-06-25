@@ -94,14 +94,38 @@ const pagesForRole = role =>
     .filter(([, pageConfig]) => pageConfig.expectedPermissionsByRole?.[role])
     .map(([pageName]) => pageName);
 
-const openBusinessPage = async pageName => {
+const commonPrefixLength = (left, right) => {
+  const maxLength = Math.min(left.length, right.length);
+  let index = 0;
+
+  while (index < maxLength && left[index] === right[index]) {
+    index += 1;
+  }
+
+  return index;
+};
+
+const openBusinessPage = async (world, pageName) => {
   const pageConfig = permissionPages[pageName];
   assert.ok(pageConfig, `未找到页面权限配置: ${pageName}`);
 
-  for (const target of pageConfig.navigate) {
+  const previousNavigate = world.currentNavigatePath ?? [];
+  const navigate = pageConfig.navigate;
+  let startIndex = commonPrefixLength(previousNavigate, navigate);
+
+  if (
+    startIndex === navigate.length &&
+    previousNavigate.length > navigate.length
+  ) {
+    startIndex = Math.max(navigate.length - 1, 0);
+  }
+
+  for (const target of navigate.slice(startIndex)) {
     await req.click(target);
     await sleep(300);
   }
+
+  world.currentNavigatePath = [...navigate];
 };
 
 const assertPagePermissions = async (world, pageName, role) => {
@@ -170,6 +194,7 @@ When('管理员选择操作员 {string} 和角色 {string}', async function (ope
 
 When('当前账号退出客户端', async function () {
   await req.click('客户端.退出登录');
+  this.currentNavigatePath = [];
   await sleep(1000);
 });
 
@@ -177,11 +202,12 @@ When('操作员 {string} 登录客户端', async function (operator) {
   await req.edit('客户端.用户名', envValue(`${operator}_USER`, operator));
   await req.edit('客户端.密码', envValue(`${operator}_PASSWORD`, 'password'));
   await req.click('客户端.登录按钮');
+  this.currentNavigatePath = [];
   await sleep(1000);
 });
 
 When('打开业务页面 {string}', async function (pageName) {
-  await openBusinessPage(pageName);
+  await openBusinessPage(this, pageName);
 });
 
 Then('页面 {string} 的实际权限应与期望权限一致', async function (pageName) {
@@ -205,7 +231,7 @@ Then('当前角色在所有配置页面的实际权限应与期望权限一致',
       role: this.role,
       pageName,
     });
-    await openBusinessPage(pageName);
+    await openBusinessPage(this, pageName);
     await assertPagePermissions(this, pageName, this.role);
   }
 });
