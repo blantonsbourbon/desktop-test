@@ -4,9 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:permission": "cucumber-js features/operator-role-permission.feature --import features/step_definitions/**/*.js --format progress --format json:reports/cucumber-report.json"
+    "test:permission": "cucumber-js",
+    "report:allure": "allure generate allure-results --clean -o allure-report"
   },
   "devDependencies": {
-    "@cucumber/cucumber": "*"
+    "@cucumber/cucumber": "*",
+    "@cucumber/messages": "^33.0.3",
+    "allure-commandline": "^2.43.0",
+    "allure-cucumberjs": "^3.10.1",
+    "allure-js-commons": "^3.10.1"
   }
 }
