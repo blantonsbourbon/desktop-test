@@ -1,5 +1,4 @@
 export default {
-  paths: ['features/operator-role-permission.feature'],
   import: ['features/step_definitions/**/*.js'],
   format: [
     'progress',

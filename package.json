@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:permission": "cucumber-js",
+    "test:permission": "cucumber-js features/operator-role-permission.feature --import features/step_definitions/**/*.js --format progress --format json:reports/cucumber-report.json",
     "report:allure": "allure generate allure-results --clean -o allure-report"
   },
   "devDependencies": {
