@@ -81,6 +81,15 @@ dependency；checksum helper 本身不需要改变。
 {{- include (printf "systemid.%s.data" .name) .root | sha256sum | trunc 12 -}}
 {{- end -}}
 
+{{- define "systemid.configmaps.checksum" -}}
+{{- $checksums := list -}}
+{{- range .names -}}
+{{- $checksums = append $checksums
+      (include "systemid.configmap.checksum" (dict "root" $.root "name" .)) -}}
+{{- end -}}
+{{- join ":" $checksums | sha256sum -}}
+{{- end -}}
+
 {{- define "systemid.configmap.name" -}}
 {{- $base := printf "%s-%s" .name .root.Values.deploymentName -}}
 {{- printf "%s-%s"
@@ -136,22 +145,31 @@ data:
 
 ## Deployment
 
-同一个参数同时生成 annotation 和 ConfigMap 名称：
+不需要为每个 ConfigMap 写一个 annotation。把当前 app 依赖的 ConfigMap 名称列出来，
+生成一个聚合 checksum：
 
 ```gotemplate
-{{- $javaoption := dict "root" . "name" "javaoption" -}}
+{{- $configmaps := list "javaoption" "logging" -}}
 
 spec:
   template:
     metadata:
       annotations:
-        checksum/javaoption: {{ include "systemid.configmap.checksum" $javaoption | quote }}
+        checksum/configmaps: {{ include "systemid.configmaps.checksum" (dict "root" $ "names" $configmaps) | quote }}
     spec:
       volumes:
         - name: javaoption
           configMap:
-            name: {{ include "systemid.configmap.name" $javaoption }}
+            name: {{ include "systemid.configmap.name" (dict "root" $ "name" "javaoption") }}
+        - name: logging
+          configMap:
+            name: {{ include "systemid.configmap.name" (dict "root" $ "name" "logging") }}
 ```
 
-因此，每增加一个 ConfigMap，只增加它自己的 `systemid.<name>.data` 和一行通用 render
-调用；checksum 与命名逻辑不再复制。
+任意一个 ConfigMap 的 data 变化，聚合 annotation 都会变化。实际上，带 checksum 的
+ConfigMap 名称已经会改变 `spec.template.spec.volumes` 并触发 rollout；这个聚合
+annotation 是额外的显式保障。如果需要从 annotation 直接看出具体哪个配置变化，才
+改用 `checksum/javaoption`、`checksum/logging` 这种逐项 annotation。
+
+因此，每增加一个 ConfigMap，只增加它自己的 `systemid.<name>.data`、一行通用 render
+调用，并把 name 加进当前 app 的 `$configmaps` 列表；checksum 与命名逻辑不再复制。
