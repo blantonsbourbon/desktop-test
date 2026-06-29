@@ -6,6 +6,74 @@
 checksum、名称和 ConfigMap 骨架只需要定义一次。每个具体 ConfigMap 只定义自己的
 data，并保留一个兼容现有调用方式的入口。
 
+## `root` 是什么
+
+`root` 不是 Helm folder 名称，也不是 Helm 内置变量。它只是传入 `dict` 的自定义键：
+
+```gotemplate
+{{- $javaoption := dict "root" . "name" "javaoption" -}}
+```
+
+这里的 `root` 保存当前 Helm 上下文 `.`，所以公共 helper 可以通过
+`.root.Values`、`.root.Release`、`.root.Chart` 和 `.root.Files` 访问原有对象。
+如果调用位置位于 `range` 或 `with` 内，应传 `$`，避免 `.` 已经变成局部上下文：
+
+```gotemplate
+{{- $javaoption := dict "root" $ "name" "javaoption" -}}
+```
+
+## 实际 Folder structure
+
+```text
+helm/
+├── shared-templates/
+│   └── configmap.tpl        # 公共 helper，以及 systemid.<name>.data/入口定义
+├── app1/
+│   ├── Chart.yaml
+│   ├── charts/
+│   ├── values/
+│   └── templates/
+│       ├── configmap.yaml   # include 具体 ConfigMap
+│       └── deployment.yaml  # annotation 和 ConfigMap 名称引用
+├── app2/
+│   ├── Chart.yaml
+│   ├── charts/
+│   ├── values/
+│   └── templates/
+│       ├── configmap.yaml
+│       └── deployment.yaml
+└── ...
+```
+
+当 `app1` 调用下面代码时，传入的 `root` 是 `app1` 的 Helm 上下文；当 `app2` 调用时，
+它就是 `app2` 的上下文。因此 `.root.Values.deploymentName` 会读取当前 app 的 values，
+而不是读取名为 `root` 的目录。
+
+`shared-templates/configmap.tpl` 只定义 named templates，本身不产生资源：
+
+```gotemplate
+{{- define "systemid.javaoption.data" -}}
+# javaoption data
+{{- end -}}
+
+{{- define "systemid.javaoption" -}}
+{{- include "systemid.configmap.render" (dict "root" . "name" "javaoption") -}}
+{{- end -}}
+```
+
+每个 app 自己的 `templates/configmap.yaml` 负责实际渲染：
+
+```gotemplate
+{{ include "systemid.javaoption" . }}
+---
+{{ include "systemid.logging" . }}
+```
+
+注意：原生 Helm 不会自动读取 chart 目录外的同级 `shared-templates`。上述方案成立的
+前提是你们现有的构建流程会把该目录加载或复制到每个 app chart 中。如果没有这层
+处理，`shared-templates` 应改成 Helm library chart，并由 `app1`、`app2` 声明为
+dependency；checksum helper 本身不需要改变。
+
 ## 公共模板：只写一次
 
 ```gotemplate
