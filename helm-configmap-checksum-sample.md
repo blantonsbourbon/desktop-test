@@ -1,29 +1,62 @@
-# Helm ConfigMap checksum
+# Helm ConfigMap 双重 checksum
 
-不需要在 `values.yaml` 里约定 `config.data`。直接对 Helm 渲染后的
-`templates/configmap.yaml` 计算 checksum：
+目标：
+
+- ConfigMap 名称带 checksum，确保新 Pod 引用明确的配置版本。
+- Pod template annotation 带相同 checksum，显式触发滚动更新。
+- 不要求 `values.yaml` 存在 `config.data`。
+
+## templates/_helpers.tpl
+
+把现有 ConfigMap 的 `data:` 内容原样移到 `mychart.configmap.data`。内容仍然可以引用
+任意 values；`mychart` 应替换为实际 chart 名称，避免 helper 重名。
 
 ```gotemplate
-# templates/deployment.yaml
+{{- define "mychart.configmap.data" -}}
+application.yaml: |
+  server:
+    port: {{ .Values.server.port }}
+{{- end -}}
+
+{{- define "mychart.configmap.checksum" -}}
+{{- include "mychart.configmap.data" . | sha256sum | trunc 12 -}}
+{{- end -}}
+
+{{- define "mychart.configmap.name" -}}
+{{- printf "%s-config-%s"
+      (.Release.Name | trunc 43 | trimSuffix "-")
+      (include "mychart.configmap.checksum" .) -}}
+{{- end -}}
+```
+
+这里将 release name 截断到 43 个字符，使 `-config-`、12 位 checksum 和名称主体的
+总长度不超过 Kubernetes 的 63 字符限制，同时不会截掉 checksum。
+
+## templates/configmap.yaml
+
+```gotemplate
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mychart.configmap.name" . }}
+data:
+{{ include "mychart.configmap.data" . | nindent 2 }}
+```
+
+## templates/deployment.yaml
+
+```gotemplate
 spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum | quote }}
+        checksum/config: {{ include "mychart.configmap.checksum" . | quote }}
+    spec:
+      volumes:
+        - name: app-config
+          configMap:
+            name: {{ include "mychart.configmap.name" . }}
 ```
 
-只要 `configmap.yaml` 的渲染结果发生变化，Pod template annotation 就会变化，
-Deployment 因而触发滚动更新。ConfigMap 的内容来自哪个 values 字段、是否使用
-`tpl`，都不影响这种写法。
-
-`/configmap.yaml` 必须与 `templates` 下的实际文件名一致。
-
-## 关于 ConfigMap 名称带 checksum
-
-上面的通用写法给 Pod annotation 加 checksum，并不修改 ConfigMap 的
-`metadata.name`。这通常已经足够，也是最简单的方案。
-
-如果必须生成类似 `demo-config-a1b2c3d4` 的不可变 ConfigMap 名称，就不能直接对
-整个 `configmap.yaml` 求 hash，因为名称本身位于该模板中，会形成循环依赖。此时必须
-单独提取并 hash ConfigMap 的实际数据源；数据源可能是 values、chart 内文件或一个
-named template，因此不存在一个不关心数据来源的通用单行写法。
+checksum 只定义和计算一次。ConfigMap 名称、annotation 和 volume 引用始终使用同一
+结果；无论配置来自哪些 values 字段，都不需要额外构造 `config.data`。
